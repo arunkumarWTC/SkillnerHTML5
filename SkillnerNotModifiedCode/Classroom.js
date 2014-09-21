@@ -162,6 +162,7 @@ Ext.define('SWP.controller.Classroom', {
     'messaging.ShowMessagingWindow',
     'movie.View',
     'player.Flowplayer',
+    'player.FlowplayerHTML',
     'player.SWPPlayer',
     'quiz.LongRadioGroup',
     'quiz.Wizard',
@@ -1178,10 +1179,7 @@ Ext.define('SWP.controller.Classroom', {
             	 VideoRecordMgr.getCourseProgress(true,function(r, t) {
             		 if(t.status){     
             			 VideoRecordMgr.logTransferAvalton( usage , ref, r , chapter_id, videoId,ts, questionindex,language);
-            			 //For the editors login no need to register for the course progress
-            			 if(!SWP.editorsLogin){            				 
-            				 CollaborationToolMgr.registerBusinessEventForCourseProgress(r);
-            			 }
+            			 CollaborationToolMgr.registerBusinessEventForCourseProgress(r);
             		 }
             	 },this);
             }
@@ -1324,7 +1322,7 @@ Ext.define('SWP.controller.Classroom', {
 
 
 
-    if (flowplayer && flowplayer.isLoaded()) {
+    if (flowplayer && flowplayer.loading) {
 
 
 
@@ -1617,7 +1615,7 @@ Ext.define('SWP.controller.Classroom', {
 
 
 
-          if (flowPlayer.isLoaded()) {
+          if (flowPlayer.loading) {
 
 
 
@@ -2310,81 +2308,69 @@ Ext.define('SWP.controller.Classroom', {
    */
 
   quizAnswer: function(rg, n) {
+
+
+
     if (rg.xtype === 'radiogroup') {
+
       return;
+
     }
 
-    var res = [],a,answers = rg.items.items,nn = n['a' + rg.questionId];
+
+
+    var res = [],
+      a,
+
+      answers = rg.items.items,
+
+      nn = n['a' + rg.questionId];
+
     this.markQuizQuestionAnswered(rg.questionId);
+
     for (var i = 0; i < answers.length; i++) {
+
       a = 0;
+
       if (Ext.isArray(nn)) {
+
         for (var inputIndex = 0; inputIndex < nn.length; inputIndex++) {
+
           if (nn[inputIndex] === answers[i].inputValue) {
+
             a = 1;
+
             break;
+
           }
+
         }
+
       } else {
+
         a = (nn == answers[i].inputValue) ? 1 : 0;
+
       }
+
+
+
       res.push([answers[i].inputValue, a]);
+
     }
 
-    var quizPanel = this.getQuizView().down('tabpanel');
-    var grid = Ext.ComponentQuery.query('chapterslist gridpanel')[0],
-	gridSelect = grid.getSelectionModel().getSelection( )[0];
-    if( (gridSelect.get('quizStatus') == CHAPTERlIST.REGULAR_QUIZ_COMPLETED ) || (gridSelect.get('quizStatus') == CHAPTERlIST.REQUIRED_QUIZ_PASSED) ||
-			(gridSelect.get('quizStatus') == CHAPTERlIST.REQUIRED_QUIZ_FAILED)  ){
-		if(quizPanel.items.last().postevaluation == 4){
-			var questionRes = [];
-			if(!Ext.isEmpty(SWP.modifiedQuestion[SWP.QuizID])){	 
-				questionRes = SWP.modifiedQuestion[SWP.QuizID];
-			}
-	    	questionRes[rg.questionId] = res;
-	    	SWP.modifiedQuestion[SWP.QuizID]= questionRes;
-		}
-		//This method call will decide this question is modified or not according to that 
-		VideoRecordMgr.getQuizAnswerModifiedStatus(rg.questionId, res, function(r, t) {
-    	      if (t.status) {
-	    	       var result = r;
-	    	       var questionRespose = [];
-	    	       if(!Ext.isEmpty(SWP.quizQuestionmodifyStatus[SWP.QuizID])){	 
-	    	    	   questionRespose = SWP.quizQuestionmodifyStatus[SWP.QuizID];
-   				   }
-	    	       if(result.isModified){
-	    	    	   questionRespose[rg.questionId] = 1;
-	    	    	   SWP.quizQuestionmodifyStatus[SWP.QuizID] = questionRespose;
-	    	       } else {
-	    	    	   questionRespose[rg.questionId] = 0;
-	    	    	   SWP.quizQuestionmodifyStatus[SWP.QuizID] = questionRespose;
-	    	       }
-	    	       var keys = [];
-				   for (var key in SWP.quizQuestionmodifyStatus[SWP.QuizID]) {
-					    keys.push(key);
-				   }
-				   for(var i=0; i < keys.length ; i++){
-						var count = keys.length;
-						var questionArray = SWP.quizQuestionmodifyStatus[SWP.QuizID]
-						var res = questionArray[keys[i]];
-						if(!Ext.isEmpty(res)){
-							if(res == 1){
-								SWP.quizModifiedQuiz[SWP.QuizID] = 1;
-								break;
-							}else{
-								SWP.quizModifiedQuiz[SWP.QuizID] = 0;
-							}
-						}
-				   }
-    	      }
-    	 }, this);
-    } else{
-    	VideoRecordMgr.saveQuizAnswer(rg.questionId, res, function(r, t) {
-    	      if (t.status) {
-    	        this.refreshQuizStatusIcon(t.result);
-    	      }
-    	}, this);
-    }
+    VideoRecordMgr.saveQuizAnswer(rg.questionId, res, function(r, t) {
+
+
+
+      if (t.status) {
+
+
+        this.refreshQuizStatusIcon(t.result);
+
+      }
+
+    }, this);
+
   },
 
   /**
@@ -2403,7 +2389,7 @@ Ext.define('SWP.controller.Classroom', {
         break;
       }
     }
-    //SWP.quizModifiedQuiz[SWP.QuizID] = 1;
+
     if (!exists) {
       if (Ext.isEmpty(SWP.quizAnsweredCount[SWP.QuizID])) {
         SWP.quizAnsweredCount[SWP.QuizID] = 1;
@@ -2474,147 +2460,60 @@ Ext.define('SWP.controller.Classroom', {
 
     var checkedValue = -1;
     Ext.iterate(checkedRadio, function(key, value) {
+
       checkedValue = value;
+
     });
 
     for (var i = 0; i < answers.length; i++) {
+
       a = (checkedValue == answers[i].inputValue) ? 1 : 0;
+
       res.push([answers[i].inputValue, a]);
+
     }
-    var quizPanel = this.getQuizView().down('tabpanel');
-    var grid = Ext.ComponentQuery.query('chapterslist gridpanel')[0],
-	gridSelect = grid.getSelectionModel().getSelection( )[0];
-    if( (gridSelect.get('quizStatus') == CHAPTERlIST.REGULAR_QUIZ_COMPLETED ) || (gridSelect.get('quizStatus') == CHAPTERlIST.REQUIRED_QUIZ_PASSED) ||
-			(gridSelect.get('quizStatus') == CHAPTERlIST.REQUIRED_QUIZ_FAILED)  ){
-		if(quizPanel.items.last().postevaluation == 4){
-			var questionRes = [];
-			if(!Ext.isEmpty(SWP.modifiedQuestion[SWP.QuizID])){	 
-				questionRes = SWP.modifiedQuestion[SWP.QuizID];
-			}
-	    	questionRes[rg.questionId] = res;
-	    	SWP.modifiedQuestion[SWP.QuizID]= questionRes;
-		}
-		
-		//This method call will decide this question is modified or not according to that 
-		VideoRecordMgr.getQuizAnswerModifiedStatus(rg.questionId, res, function(r, t) {
-    	      if (t.status) {
-	    	       var result = r;
-	    	       var questionRespose = [];
-	    	       if(!Ext.isEmpty(SWP.quizQuestionmodifyStatus[SWP.QuizID])){	 
-	    	    	   questionRespose = SWP.quizQuestionmodifyStatus[SWP.QuizID];
-   				   }
-	    	       if(result.isModified){
-	    	    	   questionRespose[rg.questionId] = 1;
-	    	    	   SWP.quizQuestionmodifyStatus[SWP.QuizID] = questionRespose;
-	    	       } else {
-	    	    	   questionRespose[rg.questionId] = 0;
-	    	    	   SWP.quizQuestionmodifyStatus[SWP.QuizID] = questionRespose;
-	    	       }
-	    	       var keys = [];
-				   for (var key in SWP.quizQuestionmodifyStatus[SWP.QuizID]) {
-					    keys.push(key);
-				   }
-				   for(var i=0; i < keys.length ; i++){
-						var count = keys.length;
-						var questionArray = SWP.quizQuestionmodifyStatus[SWP.QuizID]
-						var res = questionArray[keys[i]];
-						if(!Ext.isEmpty(res)){
-							if(res == 1){
-								SWP.quizModifiedQuiz[SWP.QuizID] = 1;
-								break;
-							}else{
-								SWP.quizModifiedQuiz[SWP.QuizID] = 0;
-							}
-						}
-				   }
-    	      }
-    	 }, this);
+    
+    //201312270330
+    if(unmarkQuizAndAnswer){
+    	VideoRecordMgr.deleteQuizAnswer(rg.questionId, res, function(r, t) {
+  	      if (t.status) {
+  	       // this.refreshQuizStatusIcon(t.result);
+  	      }
+  	    }, this);
     } else {
-    	//201312270330
-        if(unmarkQuizAndAnswer){
-        	VideoRecordMgr.deleteQuizAnswer(rg.questionId, res, function(r, t) {
-      	      if (t.status) {
-      	       // this.refreshQuizStatusIcon(t.result);
-      	      }
-      	    }, this);
-        } else {
-    	    VideoRecordMgr.saveQuizAnswer(rg.questionId, res, function(r, t) {
-    	      if (t.status) {
-    	       // this.refreshQuizStatusIcon(t.result);
-    	      }
-    	    }, this);
-        }
-    }
-    if(quizPanel.items.last().postevaluation == 4){
-	    if(unmarkQuizAndAnswer){
-	    	VideoRecordMgr.deleteQuizAnswer(rg.questionId, res, function(r, t) {
-	  	      if (t.status) {
-	  	       // this.refreshQuizStatusIcon(t.result);
-	  	      }
-	  	    }, this);
-	    }
+	    VideoRecordMgr.saveQuizAnswer(rg.questionId, res, function(r, t) {
+	      if (t.status) {
+	       // this.refreshQuizStatusIcon(t.result);
+	      }
+	    }, this);
     }
   },
 
   quizAnswerText: function(rg) {
+
     this.markQuizQuestionAnswered(rg.questionId);
+
     var res = [
       [rg.answerId, rg.getValue()]
     ];
-    var quizPanel = this.getQuizView().down('tabpanel');
-    var grid = Ext.ComponentQuery.query('chapterslist gridpanel')[0],
-	gridSelect = grid.getSelectionModel().getSelection( )[0];
-    if( (gridSelect.get('quizStatus') == CHAPTERlIST.REGULAR_QUIZ_COMPLETED ) || (gridSelect.get('quizStatus') == CHAPTERlIST.REQUIRED_QUIZ_PASSED) ||
-			(gridSelect.get('quizStatus') == CHAPTERlIST.REQUIRED_QUIZ_FAILED)  ){
-		if(quizPanel.items.last().postevaluation == 4){
-			var questionRes = [];
-			if(!Ext.isEmpty(SWP.modifiedQuestion[SWP.QuizID])){	 
-				questionRes = SWP.modifiedQuestion[SWP.QuizID];
-			}
-	    	questionRes[rg.questionId] = res;
-	    	SWP.modifiedQuestion[SWP.QuizID]= questionRes;
-		}
-		//This method call will decide this question is modified or not according to that 
-		VideoRecordMgr.getQuizAnswerModifiedStatus(rg.questionId, res, function(r, t) {
-    	      if (t.status) {
-	    	       var result = r;
-	    	       var questionRespose = [];
-	    	       if(!Ext.isEmpty(SWP.quizQuestionmodifyStatus[SWP.QuizID])){	 
-	    	    	   questionRespose = SWP.quizQuestionmodifyStatus[SWP.QuizID];
-   				   }
-	    	       if(result.isModified){
-	    	    	   questionRespose[rg.questionId] = 1;
-	    	    	   SWP.quizQuestionmodifyStatus[SWP.QuizID] = questionRespose;
-	    	       } else {
-	    	    	   questionRespose[rg.questionId] = 0;
-	    	    	   SWP.quizQuestionmodifyStatus[SWP.QuizID] = questionRespose;
-	    	       }
-	    	       var keys = [];
-				   for (var key in SWP.quizQuestionmodifyStatus[SWP.QuizID]) {
-					    keys.push(key);
-				   }
-				   for(var i=0; i < keys.length ; i++){
-						var count = keys.length;
-						var questionArray = SWP.quizQuestionmodifyStatus[SWP.QuizID]
-						var res = questionArray[keys[i]];
-						if(!Ext.isEmpty(res)){
-							if(res == 1){
-								SWP.quizModifiedQuiz[SWP.QuizID] = 1;
-								break;
-							}else{
-								SWP.quizModifiedQuiz[SWP.QuizID] = 0;
-							}
-						}
-				   }
-    	      }
-    	 }, this);
-    } else {
-	    VideoRecordMgr.saveQuizAnswer(rg.questionId, res, function(r, t) {
-	      if (t.status) {
-	        this.refreshQuizStatusIcon(t.result);
-	      }
-	    }, this);
-    }
+
+
+
+    VideoRecordMgr.saveQuizAnswer(rg.questionId, res, function(r, t) {
+
+
+
+      if (t.status) {
+
+
+        this.refreshQuizStatusIcon(t.result);
+
+      }
+
+    }, this);
+
+
+
   },
 
   questionSwitch: function(tabs, nt, ot, i, ani, opt) {
@@ -2750,14 +2649,13 @@ Ext.define('SWP.controller.Classroom', {
     if (!Ext.isEmpty(videoId) && videoId > 0) {
 
 
-
       VideoRecordMgr.getVideoURL(Number(videoId), function(r, t) {
-
         if (t.status) {
-
           nt.captions = r['captions'];
 
           nt.videoURL = r['url'];
+          
+          nt.actualVideoURL = r['actualVideoURL'];
 
         }
 
@@ -2997,6 +2895,7 @@ Ext.define('SWP.controller.Classroom', {
 
     me.getQuizView().expand(false);
     VideoRecordMgr.getQuiz(id, function(result, t) {
+    	
       if (t.status) {
         var badgeIndexes = [];
         var tabs = me.getQuizView().down('tabpanel');
@@ -3009,9 +2908,6 @@ Ext.define('SWP.controller.Classroom', {
         SWP.QuizID = id;
         SWP.quizAnsweredCount[SWP.QuizID] = '';
         SWP.quizAnsweredQuestions = [];
-        SWP.quizModifiedQuiz = [];
-        SWP.modifiedQuestion = [];
-        SWP.quizQuestionmodifyStatus = [];
         var quizQuestionMap = {};
         var quizTraingFile = {};
         var r = result['items'];
@@ -3152,6 +3048,7 @@ Ext.define('SWP.controller.Classroom', {
               var quizTab = me.getQuizView().down('tabpanel');
               quizTab.setActiveTab(tabIndex);
               quizTab.getActiveTab().getLayout().setActiveItem(1);
+
             } else {
               tabIndex = (!Ext.isEmpty(tabInd) && tabInd > 0) ? tabInd : 0;
               me.getQuizView().down('tabpanel').setActiveTab(tabIndex);
@@ -3192,7 +3089,6 @@ Ext.define('SWP.controller.Classroom', {
 
   findPlaying: function(d, t, selected, donotSelectCurrentRecord) {
 
-
     var grid = Ext.ComponentQuery.query('chapterslist gridpanel')[0];
     if (!selected && !donotSelectCurrentRecord) {
       selected = grid.getSelectionModel().getSelection()[0];
@@ -3203,51 +3099,27 @@ Ext.define('SWP.controller.Classroom', {
 
     var swpplayer = Ext.ComponentQuery.query('swpplayer')[0];
     if (selected && selected.get('uid').substr(0, 1) === 'Q') {
-
       return selected;
-
-
-
     } else if (this.getPlayer().playingVideo() || swpplayer.clickeventFired == false) {
 
       var ts = t || this.getPlayer().getTime() + 1;
-
-
-
       var chs = Ext.StoreManager.lookup('chapters');
-
-
-
       var i = chs.findBy(function(rec, id) {
-
-          return (rec.get('video_id') == SWP.video &&
-
-            ts >= rec.get('start') &&
-
-            ts <= rec.get('stop'));
-
-        },
-
-        this);
+		          return (rec.get('video_id') == SWP.video &&
+		            ts >= rec.get('start') &&
+		            ts <= rec.get('stop'));
+		        },this);
 
       if (d) {
-
         i = i + d;
-
       }
 
-
-
       if (i < 0) {
-
         i = 0;
-
       }
 
       var ch = chs.getAt(i);
-
       this.getPlayer().resetSkippable(ch);
-
       return ch;
 
     } else {
@@ -3277,11 +3149,7 @@ Ext.define('SWP.controller.Classroom', {
     	  }
     	  return ch;
       }
-
     }
-
-
-
   },
 
   /**
@@ -3359,129 +3227,42 @@ Ext.define('SWP.controller.Classroom', {
   },
 
   /**
-   
    * This method willplay the video associated with any quiz's Question.
-   
-   *
-   
    */
-
   playQuestionVideo: function() {
-
-
-
+	  debugger;
     var now = 0;
-
     var vch = false;
-
     var tab = this.getQuizView().down('tabpanel').getActiveTab();
-
     var videoId = (tab.videoId).substr(1);
-
     if (tab.videoStart >= 0 && videoId != 0) {
-
       var flowPlayer = this.getPlayer();
-
       this.getContentPanel().getLayout().setActiveItem(flowPlayer);
-
-
-
-      flowPlayer.removePlayer();
-
-      var fp = flowPlayer.createFplayer();
-
-      flowPlayer.add(fp);
-
-      flowPlayer.doLayout();
+      //flowPlayer.removePlayer();
+      //var fp = flowPlayer.createFplayer();
+      //flowPlayer.add(fp);
+      //flowPlayer.doLayout();
 
       // Story --28313083
-
       qv = this.getQuizView();
-
       qv.down('button[action=video]').disable();
-
       if (tab.imageUrl) {
-
         qv.down('button[action=figure]').enable();
-
       }
-
       var state = this.getPlayer().getVideoState();
-
-      var fplayer = this.getPlayer().getFlowPlayer();
-
-
-
-      //
-
+      //var fplayer = this.getPlayer().getFlowPlayer();
+      //if(!fplayer){
+    	  debugger;
+    	  var rec = this.findPlaying();
+    	  this.getPlayer().initializePlayer(rec,0,tab.actualVideoURL);
+    	  var fplayer = this.getPlayer().getFlowPlayer();
+      //}
+      debugger;
       //  If browser is IE, remove function is not calling for flowplayer. So when user clciks on 
-
       //  Question video, the player that is being played for lesson is getting used. And hence,
-
       //  making the player time to zero, in order to reduce conflict between earlier played lesson.
-
-      //
-
-
-      fplayer.seek(0);
-
-      try {
-
-        if (state < 3 || state > 4 || (fplayer.getClip().url != tab.videoURL)) {
-
-
-
-          //
-
-          // set justplay vlaue of the swpplayer object to true.
-
-          // so that in the flowplayer seek handler will call load captions to load the srt files.
-
-          //
-
-
-
-          flowPlayer.justplay = true;
-          var start = tab.videoStart;
-          fplayer.play({
-            url: tab.videoURL
-          }).onBegin(function() {
-            if (start !== null) {
-
-              this.seek(start);
-              start = null;
-            }
-          });
-        } else {
-
-          if (state > 2) {
-
-            fplayer.startBuffering();
-
-            fplayer.seek(tab.videoStart);
-
-          }
-
-        }
-
-        if (state == 4) {
-
-          fplayer.startBuffering();
-
-        }
-
-
-
-        fplayer.resume();
-
-      } catch (e) {
-
-        console.log(e.message);
-
-      }
-
+      fplayer.seek(tab.videoStart);
     }
-
   },
 
 
@@ -3601,242 +3382,101 @@ Ext.define('SWP.controller.Classroom', {
 
 
   /**
-   
    * This method moves flowplayer to play the first chapter of the next lesson.
-   
    *
-   
    */
-
   nextLesson: function() {
-
     var rec = this.findPlaying();
-
     var nextRec = rec;
-
     var chapters = Ext.StoreManager.lookup('chapters');
-
     var lastRec = chapters.last(false);
 
-
-
     if (rec.data.lesson === lastRec.data.lesson) {
-
-      //
-
-      // The user is already on the last lesson of the store. Nothing needs to be done.
-
-      //
-
+      // The user is already on the last lesson of the store. 
+      //Nothing needs to be done.
       return;
-
     }
 
-
-
-    //
-
-    // Indentify the chapter where lesson has changed and play that chapter 
-
-    //
-
-    for (var tempInd = rec.index + 1; tempInd <= lastRec.index; tempInd++) {
-
-
-
-      if (chapters.getAt(tempInd).data.video_id  !== rec.data.video_id ) { //201407031055
-
+    // Indentify the chapter where lesson has changed and play that 
+    //chapter 
+    for(var tempInd=rec.index+1; tempInd <= lastRec.index; tempInd++) {
+      if (chapters.getAt(tempInd).data.video_id !== rec.data.video_id) { //201407031055
         nextRec = chapters.getAt(tempInd);
-
         break;
-
       }
-
     }
-
-
 
     this.chapterSelected(null, null, null, nextRec, null);
-
   },
 
   /**
-   
    * This method moves flowplayer to play the first chapter of the current lesson (in case the user is in the
-   
    * middle of the lesson) or the first chapter of the previous lesson.
-   
-   *
-   
    */
 
   prevLesson: function() {
-
     var rec = this.findPlaying();
-
     var prevRec = rec;
-
     var chapters = Ext.StoreManager.lookup('chapters');
-
     var firstRec = chapters.first(false);
-
     var prevRecordIdentified = false;
-
-
-
     if (rec.index === firstRec.index) {
-
-      //
-
       // The user is already on the first record of the store. Nothing needs to happen!
-
-      //
-
       return;
-
     } else if (rec.data.lesson === firstRec.data.lesson) {
-
-      //
-
       // We are at some chapter of the first lesson. Hence we just need to play the first
-
       // chapter of this lesson
-
-      //
-
       prevRec = firstRec;
-
       prevRecordIdentified = true;
-
     }
-
-
 
     if (prevRecordIdentified === false) {
-
-
-
       var wasInMiddleOfALesson = false;
-
-
-
       for (var tempInd = rec.index - 1;
         (tempInd >= 0) && (prevRecordIdentified === false); tempInd--) {
-
-
-
         if (chapters.getAt(tempInd).data.lesson !== rec.data.lesson) {
-
           if (wasInMiddleOfALesson === true) {
-
-            //
-
             // The user was in the middle of a lesson and now we have just reached the
-
             // last chapter of the previous lesson. Hence, the last chapter would be 
-
             // the first chapter of the current lesson and this will be played.
-
-            //
-
             prevRec = chapters.getAt(tempInd + 1);
-
             prevRecordIdentified = true;
-
             break;
-
           } else {
-
-            //
-
             // User was on the first chapter of the current lesson. Now we have reached the last 
-
             // chapter of the previous lesson. Identify the first chapter of this lession.
-
             // In case this is the first chapter of the first lesson then anyways this is the 
-
             // chapter that shall be played.
-
-            // 
-
             prevRec = chapters.getAt(tempInd);
-
-
-
             for (var prevLessonInd = prevRec.index; prevLessonInd >= 0; prevLessonInd--) {
-
               if (chapters.getAt(prevLessonInd).data.lesson !== prevRec.data.lesson) {
-
-                // 
-
                 // We are changing lesson again and hence the previous chapter was the
-
                 // first chapter of the desired lesson.
-
-                //
-
                 prevRec = chapters.getAt(prevLessonInd + 1);
-
                 break;
-
               }
-
-
-
               if (prevLessonInd === 0) {
-
-                //
-
                 // We were iterating chapters of first lesson and hence there will not be any 
-
                 // change in lesson. The first record shall be played.
-
-                //
-
                 prevRec = chapters.getAt(0);
-
               }
-
             }
-
-
-
             prevRecordIdentified = true;
-
             break;
-
           }
-
-
-
         } else {
-
-          //
-
           // User is in the middle of the same lesson. 
-
-          //
-
           prevRec = chapters.getAt(tempInd);
-
           wasInMiddleOfALesson = true;
-
           continue;
-
         }
-
       }
-
     }
-
-
-
+    //if the previous record is identified then only we 
+    //have to move to that content.
     if (prevRecordIdentified === true) {
-
       this.chapterSelected(null, null, null, prevRec, null);
-
     }
-
   },
 
   chapterSelectionChanged: function(chPnl, chGrid, s, selection) {
@@ -3845,9 +3485,6 @@ Ext.define('SWP.controller.Classroom', {
       v = chGrid.getView();
 
     if (!selected) return;
-
-
-
   },
 
   chapterClicked: function(chPnl, chGrid, v, selected, item, idx, e, eOpts, questionInd, seekValue, language) {
@@ -3876,9 +3513,7 @@ Ext.define('SWP.controller.Classroom', {
     //201405210809
     var swpPlayer = this.getPlayer();
     var flowPlayer = this.getPlayer().getFlowPlayer();
-
-
-
+    
     if (Ext.isEmpty(selected)) {
 
       return;
@@ -3953,54 +3588,66 @@ Ext.define('SWP.controller.Classroom', {
       grid.getSelectionModel().deselectAll();
       grid.getSelectionModel().lastSelected = undefined;
       this.getQuizView().collapse();
-
+      $("#player").addClass('flowplayer');
+      $("#player").addClass('fixed-controls');
+      $("#player").addClass('play-button');
       this.getContentPanel().getLayout().setActiveItem(this.getPlayer());
 
 		//201405210809
-      if (flowPlayer.isLoaded()) {
-        flowPlayer.getControls().setEnabled({
-          all: true
-        });
-        flowPlayer.getPlugin('content').hide();
-
-      }
+//      if (flowPlayer.loading) {
+//        flowPlayer.getControls().setEnabled({
+//          all: true
+//        });
+//        flowPlayer.getPlugin('content').hide();
+//
+//      }
 
 
       // Regarding IE11 memory issue this code is commented 
       //201405210809
       //Code uncommented , for the quiz selection we need to remove the player 
       //and need to create it.
-      if (SWP.quized) {
-        var justFinished = swpPlayer.justFinished;
-        if (flowPlayer.isLoaded()) {
-          flowPlayer.unload();
-        }
-        swpPlayer.removePlayer();
-
-        fp = swpPlayer.createFplayer();
-
-        swpPlayer.add(fp);
-
-        fp.justFinished = justFinished;
-
-        swpPlayer.doLayout();
-      }
+//      if (SWP.quized) {
+//        var justFinished = swpPlayer.justFinished;
+//        if (flowPlayer.loading) {
+//          flowPlayer.unload();
+//        }
+//        swpPlayer.removePlayer();
+//
+//        fp = swpPlayer.createFplayer();
+//
+//        swpPlayer.add(fp);
+//
+//        fp.justFinished = justFinished;
+//
+//        swpPlayer.doLayout();
+//      }
 
 
 
       // }
-
       
-      swpPlayer.stopImmedietly = false;
+      //
+      debugger;
+      
+      var vide = selected.get('video_id').substr(1);
+      VideoRecordMgr.getDirectVideoURL(vide,function(r,t){
+    	  if (t.status) {
+              var videoURL = r['url'];
+              swpPlayer.initializePlayer(selected, ts ,videoURL );
+          }
+	  },this);
+      
+//      swpPlayer.stopImmedietly = false;
 
       // Calling the Refresh Icons method.
       swpPlayer.seekedTo = true;
       this.getChapters().refreshIcons(selected);
       swpPlayer.seekedTo = false;
       swpPlayer.currentPosition = selected.get('start');
-
       swpPlayer.chapterSelected = selected.get('start');
-      swpPlayer.playChapter(selected, ts);
+      
+      //swpPlayer.playChapter(selected, ts);
       SWP.quized = false;
       swpPlayer.hideReplayNextPlayButton();
 
@@ -4020,18 +3667,18 @@ Ext.define('SWP.controller.Classroom', {
     	  }
       }
 
-      if (flowPlayer.isLoaded()) {
+      if (flowPlayer.loading) {
     	  
         //201310271256
         //As per the issue it should be an alert.
     	//201407031055
-         Ext.Msg.alert(CHAPTERlIST.ALERT_TITLE, CHAPTERlIST.LESSONLOCK_MSG1+precedingLessons.toString()+CHAPTERlIST.LESSONLOCK_MSG2, function(btn) {}, this);
+         Ext.Msg.alert(CHAPTERlIST.ERROR, CHAPTERlIST.LESSONLOCK_MSG1+precedingLessons.toString()+CHAPTERlIST.LESSONLOCK_MSG2, function(btn) {}, this);
         //201310270605
         return;
 
       } else {
 
-    	Ext.Msg.alert(CHAPTERlIST.ALERT_TITLE, CHAPTERlIST.LESSONLOCK_MSG1+precedingLessons.toString()+CHAPTERlIST.LESSONLOCK_MSG2, function(btn) {}, this);
+    	Ext.Msg.alert(CHAPTERlIST.ERROR, CHAPTERlIST.LESSONLOCK_MSG1+precedingLessons.toString()+CHAPTERlIST.LESSONLOCK_MSG2, function(btn) {}, this);
         return;
       }
     }
@@ -8554,22 +8201,6 @@ Ext.define('SWP.controller.Classroom', {
             }
           }
         }
-
-//	        if (chapter[k].get('chapterplaybackpause')) {
-//
-//	          for (var i = 0; i < chapter[k].get('marker').length; i++) {
-//
-//	            var markerValue = Ext.Array.indexOf(swpplayer.playbackPoints, chapter[k].get('marker')[i] * 1000);
-//
-//	            if (markerValue == -1) {
-//
-//	              swpplayer.playbackPoints.push(chapter[k].get('marker')[i] * 1000);
-//
-//	            }
-//
-//	          }
-//
-//	        }
       }
     };
     var me = this;
@@ -8703,7 +8334,6 @@ Ext.define('SWP.controller.Classroom', {
     }
 
   },
-
 
   /**
    * This method is handling the FlowPlayer Before Finesh event

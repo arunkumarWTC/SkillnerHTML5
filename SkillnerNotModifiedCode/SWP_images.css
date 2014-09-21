@@ -1852,3 +1852,7 @@ height: 50px !important;
 ::-ms-clear {
    display: none;
 }
+
+.player_screen_scroll{
+	overflow:hidden !important;
+}

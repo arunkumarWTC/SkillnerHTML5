@@ -10,7 +10,7 @@
 
 <com:TControl  >
     <script>
-   /*console={
+  /* console={
    log:function(){}
    }*/
        // Ext.onReady(function(){
@@ -104,11 +104,24 @@
 
 <link rel="stylesheet" href="bootstrap.css">
 
+<!-- minimalist.css , functional.css , playful.css -->
+<link rel="stylesheet" type="text/css" href="flowplayer/skin/playful.css">
 
+   <!-- site specific styling -->
+   <style type="text/css">
+   body { font: 12px "Myriad Pro", "Lucida Grande", sans-serif; text-align: center; padding-top: 5%; }
+   .flowplayer { width: 90%; }
+   </style>
+
+<!-- <script type="text/javascript" src="http://code.jquery.com/jquery-1.7.1.min.js"></script> -->
 <script type="text/javascript" src="http://code.jquery.com/jquery-1.5.2.min.js"></script>
 <script type="text/javascript" src="tinymce/tiny_mce.js"></script>
 
+<!-- <script type="text/javascript" src="flowplayer/flowplayer-5.4.6.min.js"></script> -->
+<!-- <script type="text/javascript" src="flowplayer/flowplayerMyVersion.js"></script> -->
 <script type="text/javascript" src="flowplayer/flowplayer-3.2.12.min.js"></script>
+
+<!-- <script type="text/javascript" src="flowplayer/flowplayer.js"></script> -->
 <!-- <script type="text/javascript" src="exttools/view/TinyMCETextArea.js"></script><script type="text/javascript" src="http://releases.flowplayer.org/js/flowplayer-3.2.12.min.js"></script>-->
 
 

@@ -13,7 +13,7 @@ Ext.define('SWP.view.player.Flowplayer', {
     extend: 'Ext.flash.Component',
     alias: 'widget.flowplayer',
     
-    url: "flowplayer/flowplayer-3.2.16.swf",
+    url: "flowplayer/flowplayer.swf",
     smilUrl: undefined,
     store: undefined,
     queryByFn: Ext.emptyFn,
@@ -290,6 +290,7 @@ Ext.define('SWP.view.player.Flowplayer', {
 	 	         plugins:{
 	 	         	rtmp:{
 	 	        	 	url : 'flowplayer/flowplayer.rtmp-3.2.12.swf',
+	 	        	 	//rtmp://s3b78u0kbtx79q.cloudfront.net/cfx/st
 	 	         		netConnectionUrl:"rtmp:\/\/fss28.streamhoster.com\/jnovak"
 	 	         	},
 	 	         	'dock1': {
@@ -392,11 +393,16 @@ Ext.define('SWP.view.player.Flowplayer', {
 		 	                     color: '#ffffff'
 		 	                 }
 		 	             }
+				},
+				timings:{
+					timings : this.timingPlugin
 				}
 			}
 		};
+	     //debugger;
 	     flowplayer.addPlugin("timings", this.timingPlugin);
 	     me.fp = flowplayer(this.getSwfId(),params,flowplayerConf).onLoad(function() { this.stop(); return true; } );
+	     //me.fp = flowplayer;//(this.getSwfId(),params,flowplayerConf).onLoad(function() { this.stop(); return true; } );
 	     me.getEl().down('div').setHeight('100%');
 	     me.getEl().down('div').setStyle({overflow : 'hidden'});
     },

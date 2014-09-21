@@ -65,7 +65,6 @@
  * 28950		Dinesh.GK			 	  201407031055   Modified :getRecordChapters() lesson settings related code is modified
  *
  * 28961		Dinesh GK				  201407070707	 Modified: getQuiz() summary tab is changed.
- * 29071		Dinesh GK				  201407290710	 Modified: numericQuestionEvaluation method is changed as per the request,saveQuizAnswer for "Value for range" also handling.
  */
 Prado::using('FreshSystem.3rdparty.curl');
 
@@ -1473,16 +1472,15 @@ class VideoRecordMgr extends TComponent {
      *This function will get the first video url of the video as well as the captions 
      *assocaited with the video. and return to the ui
   	*/
-public function getVideoURL($videoUId){
+	public function getVideoURL($videoUId){
 		SWPLogManager::log("It should return the url of the video :",array("videoUId"=> $videoUId ),TLogger::INFO,$this,"getVideoURL","SWP");
     	$videos = VideoRecord::finder()->find('uid = ? ',$videoUId);
-    	
+    	$actualVideoURL = $this->getDirectVideoURL($videos->content_id);
     	$videoURL =$videos->getFirstVideo();
     	$captions = VideoCaptionsRecord::finder()->findAll(' video_id = ? ' , $videos->content_id );
     	SWPLogManager::log("Returns the url of the video and the related captions data :",array('url'=>$videoURL,
    				'captions'=> $captions),TLogger::INFO,$this,"getVideoURL","SWP");
-   	return array('url'=>$videoURL,
-   				'captions'=> $captions);
+   		return array('url'=>$videoURL,'captions'=> $captions,'actualVideoURL'=>$actualVideoURL);
    	
     }
     
@@ -2141,20 +2139,21 @@ public function getVideoURL($videoUId){
 	    		array_push($markUnviewed, $videos->name);
 	    	}
 	    }	
-	    $markUnviewStr = "<ul>";
-	    foreach ( $markUnviewed as $markUnview ){
-	    	$markUnviewStr = $markUnviewStr."<li>".$markUnview."</li>";
-	    }
-	    $markUnviewStr = $markUnviewStr."</ul>";
-	    $markUnviewMsg ="<br><br><div id='reset-msg ' class='reset-msg-cls  quiz-msg'><h1>You failed this evaluation.</h1><p>The following course contents must be viewed or completed again before you can make a new attempt to take this evaluation:</p>".$markUnviewStr."</div>";
-						
+	    $markUnviewMsg ="<br><br>
+						<div id='reset-msg' class='reset-msg-cls'>
+							You failed this evaluation.The following course contents
+							<br> must be viewed or completed again before you can make a 
+							<br>new attempt to take this evaluation:<br>
+							".implode(", ",$markUnviewed)."
+						</div>
+						<div class='reset-msg2-cls' >To reset this evaluation, click the \"Reset\"</div>"; 	
 	    /**
-	     * Here If student failed the quiz and “Lessons to mark unviewed on failure” option was active
+	     * Here If student failed the quiz and Lessons to mark unviewed on failure option was active
 	     * then we are showing the mark unview message in summary tab.
 	     */	
 		$scoreForm .=($quizResult == 'passed') ? 
 					"</div>" : 
-					((sizeof($markUnviewed) > 0 ) ? $markUnviewMsg."<div id='quiz-reset'><p>To reset this evaluation, click the “Reset” </p></div></div>" : "<div id='quiz-reset'></div></div>");
+					((sizeof($markUnviewed) > 0 ) ? $markUnviewMsg."<div id='quiz-reset'></div></div>" : "<div id='quiz-reset'></div></div>");
 		if( $quizSettings['requiredPass'] == 0 ){
 			$html = $answeredDetails ." <br> <div class='your-score' >Your score: <span class='".$yourScorecls."' style='padding: 2px 4px;'>".$yourScore."</span> </div>";
 		}else if( $quizSettings['postEvalution'] == 1 ){
@@ -2296,21 +2295,20 @@ public function getVideoURL($videoUId){
 			
 			$answer = QuizAnswerRecord::finder()->findByPk($rec->answer_id);
 			$rec->value = $a[1];
+			//$rec->multiAnsCount = $rec->multiAnsCount +1;
+								
 			if ($question->qtype == 'numeric question') {
 				//20131118750
-				//201407290710
-				if( $answer->numeric_type == 'Single Value' ){
-					$questionResult = $this->numericQuestionEvaluation( $rec->value, $answer->first_value, null );
-					$rec->good = (int)$questionResult;
-				}else if( $answer->numeric_type == 'Value From Range' ){
-					if( $answer->range_limit == 1 ){
-						$questionResult = $this->numericQuestionEvaluation( $rec->value, $answer->first_value+1, $answer->second_value-1 );
-						$rec->good = (int)$questionResult;
-					}else{
-						$questionResult = $this->numericQuestionEvaluation( $rec->value, $answer->first_value, $answer->second_value );
-						$rec->good = (int)$questionResult;
-					}
-				}
+				$questionResult = $this->numericQuestionEvaluation( $answer->name, $rec->value );
+				$rec->good = (int)$questionResult;
+				/*$range = explode('-',trim($answer->name,'()[]'));
+				//$rec->value = implode(',',$range);
+				if (count($range)==1) {
+				    $rec->good = ($rec->value == $answer->name) ? 1 : 0;
+				} else {
+				    $rec->good = ($rec->value >= $range[0] && $rec->value <= $range[1]) ? 1 : 0;
+				}*/
+				
 			} else {
 				//2014070937
 				//If user selected this answer or the value is already selected then the 
@@ -2325,41 +2323,14 @@ public function getVideoURL($videoUId){
 			}
 			$rec->save();
 	    }
+	    //$quizstatus = $this->evaluateQuizTrackSeen($question->parent_id, $question->getDbConnection() );
 	    
 	    SWPLogManager::log("Returns quiz status to front end(whether all quiz questions answered or not)",
 		array("quizstatus"=>$quizstatus),TLogger::INFO,$this,"saveQuizAnswer","SWP");
+	    //return $quizstatus;
 	}
 	
-	/**
-	 * @remotable
-	 *
-	 */
-	public function getQuizAnswerModifiedStatus($q,$answers) {
-	    $user = Prado::getApplication()->getUser();
-	    $pid = $user->getProductID();
-	    $cid = $user->getContentID();
-	    
-	    $question = QuizRecord::finder()->findByPk($q);
-	    $isFailureAttempt = false;
-	    $result = array();
-	    foreach($answers as $a) {
-			$rec = null;
-			$rec = QuizAnswerResultRecord::finder()->find( 'answer_id = ? AND course_id = ? AND product_id = ? ', array($a[0], $cid, $pid ));
-			if($rec){
-				if($rec->value == $a[1]){
-					$result = array('isModified'=>false);
-				}else{
-					$result = array('isModified'=>true);
-					break;
-				}
-			} else {
-				$result = array('isModified'=>true);
-				break;
-			}
-	    }
-	    return $result;
-	}
-	
+		
 	/**
 	 * @remotable
 	 *
@@ -2411,7 +2382,7 @@ public function getVideoURL($videoUId){
 
 		$quizSettings = $this->getQuizSettings( $parentId );
 	   	$result = '';
-		if( $quizSettings['requiredPass'] == 0 ){
+		if( $quizSettings['requiredScore'] == 0 ){
 	   		$result = 'regular-quiz-incomplete';//'quizOpen';
 	        if ( $isClickonSummary ) {
 	        	$result = 'regular-quiz-completed';//'quizClosed';
@@ -2665,7 +2636,6 @@ public function getVideoURL($videoUId){
 				'anchor'=>'100% 100%',
 			    'overflow'=> 'auto',
 			    'bodyStyle'=>'height:100%;overflow-y:auto;',
-			 	'postevaluation'=>$quizSettings->post_evaluation,
 				'imageUrl'=>$q->firstImage,
 				'videoStart'=>$q->from_date,
 				'videoId'=>'L'.$q->category_id,
@@ -3511,27 +3481,79 @@ public function getVideoURL($videoUId){
 	*	
 	*  20131118750
     **/
-	//201407290710
-	public function numericQuestionEvaluation( $answerResult, $answer1, $answer2 ){
+	public function numericQuestionEvaluation( $answer, $answerResult ){
 	
-		$result = false;
-		preg_match('/^(\-)?[0-9]*(\.[0-9]*)?$/', $answerResult, $matchStr ); 
+		$ans = preg_replace( '/\s+/','',$answer );
+		$value = preg_replace( '/\s+/','',$answerResult );
+		$nAndR = explode(',',$ans);
+		//201311221110
+		preg_match('/[^\d,.-]+/', $value, $matchStr ); //Find the characherts which are except decimal,",.-"
+		$specialChar = trim($matchStr[0]);
+		$negVal = explode('-',$value);
 		
-		if(count($matchStr) == 0 )
-			return $result;
+		// 201311251602
+		// Here if the range value is 0 then the condition was failing,
+		// so modified the condition as per requirement.
+		
+		if( !empty($specialChar) || (count($negVal) > 1 && (substr( $value,0,1) != '-')  )  || (count($negVal) > 2) ){
+			return false ;
+		}
+		
+		if( count($nAndR) > 1 ){ //If the answer is combination of Numeric and Range this code is execute.
+	
+			$valueExp = explode(',',$value);  
 			
-		if( $answer2  ){
+			if( count($valueExp) != count($nAndR) ){
+	
+			    return $result = false;
+			}else{
+		
+				for( $i = 0; $i < count($nAndR) ; $i++ ) { // loop thru all answers options (ex: 10,20,( 0.1)-(0.15) etc.)
+		
+					 $re = explode(')-(',$nAndR[$i]);
+					 
+					 if( count($re) > 1 ){
+					 	
+					 	if( number_format(trim($re[0],'()[]'),10 ) < number_format(trim($re[1],'()[]'),10) ) { //If range is given like FROM to TO value (ex: (10)-(100))
+							$result = ( number_format( trim($valueExp[$i],'()[]'), 10 ) >= number_format(trim($re[0],'()[]'),10 ) 
+										&& number_format ( trim($valueExp[$i],'()[]'),10 ) <= number_format(trim($re[1],'()[]'),10) ) ? true :false ;	 
+					 	}else{ //If range is given like To to FROM value (ex: (100)-(10))
+					 		$result = ( number_format( trim($valueExp[$i],'()[]'), 10 ) <= number_format(trim($re[0],'()[]'),10 ) 
+										&& number_format ( trim($valueExp[$i],'()[]'),10 )  >= number_format(trim($re[1],'()[]'),10) ) ? true :false ;	 
+					 	}
+					 }else{
+					 	
+					 	$result = ( number_format( trim($valueExp[$i],'()[]'),10) == number_format( trim($re[0],'()[]'),10) )  ? true :false ;
+					 }
+					 if ( $result == false ){ //If one answer is wrong then that question become wrong 
+	
+					 	return $result;					
+					 }
+					
+				}
+				}
+		}else{ //If the answer type is numeric / range 
 			
-			if( $answer1 <= $answerResult && $answer2 >= $answerResult ){
-				$result = true;
-			}
+			$singleAns = explode(')-(',$nAndR[0])  ;
 				
-		}else {
-			if( $answerResult == $answer1)
-			$result = true;
+			if( count($singleAns) > 1 ){ //If that Answer type is Range this condetion is execute .
+				if( number_format(trim($singleAns[0],'()[]'),10)  <  number_format(trim($singleAns[1],'()[]'),10) ){  //If range is given like FROM to TO value (ex: (10)-(100))
+					
+					$result = ( number_format( trim($value,'()[]'), 10 ) >= number_format(trim($singleAns[0],'()[]'),10) 
+								&& number_format( trim($value,'()[]'),10) <= number_format(trim($singleAns[1],'()[]'),10))  ? true :false ;
+				}else{  //If range is given like FROM to TO value (ex: (100)-(10))
+					
+					$result = ( number_format( trim($value,'()[]'), 10 ) <= number_format(trim($singleAns[0],'()[]'),10) 
+								&& number_format( trim($value,'()[]'),10) >= number_format(trim($singleAns[1],'()[]'),10))  ? true :false ;
+				}
+			}else{
+		
+				$result = ( number_format( trim($value,'()[]'),10) == number_format(trim($singleAns[0],'()[]'),10) ) ? true :false ;	
+			}
 		}
 		return $result ;
 	}
+	
 	/**
 	 * When a course is finalized we are registering an event into business events table
 	 * @param unknown_type $content_id
@@ -4076,6 +4098,20 @@ public function getVideoURL($videoUId){
 		return true;
 	}
 	
+    /**
+     * @remotable
+     *
+     */
+	public function getDirectVideoURL($videoUId){
+    	$videos = VideoRecord::finder()->find('content_id = ? ',$videoUId);
+    	$videoURL = "";
+    	$images = json_decode($videos->images);
+		if (($list = $images) && $list[0]) {
+    		$videoURL =  $list[0]->uid;
+    	}
+   		return array('url'=>$videoURL);//true;//
+    }
+    
 	/**
 	 * This method is used to find of the records according to 
 	 * the content and set the values according to the give value.

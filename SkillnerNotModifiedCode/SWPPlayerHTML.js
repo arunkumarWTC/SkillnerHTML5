@@ -29,7 +29,7 @@ Ext.tip.QuickTipManager.init(true, {showDelay : 2000,style:'white-space:nowrap;'
 
 Ext.define('SWP.view.player.SWPPlayer', {
     extend: 'Ext.panel.Panel',
-    alias: 'widget.swpplayer',
+    alias: 'widget.swpplayerhtml',
     
     requires: [
                'SWP.view.player.FlowplayerHTML'
@@ -83,7 +83,7 @@ Ext.define('SWP.view.player.SWPPlayer', {
     	});
 
     	Ext.apply(fp, { fwd10s : 0 }, { justFinished: false } );
-    	this.flowplayerhtml = fp;
+
     	fp.on('seek', function(fp, clip, time) {
 			 console.log( time , 'seek time');
              me.chapterSelected = time;
@@ -152,15 +152,15 @@ Ext.define('SWP.view.player.SWPPlayer', {
                 me.getFlowPlayer().getPlay().show();
         });
     	
-		fp.on('playerfullscreen',function(flowplayer, clip){
+		fp.on('playerfullscreen',function(flowplayerhtml, clip){
 			
-			me.fireEvent('playerfullscreenclicked',flowplayer.fp,true);
+			me.fireEvent('playerfullscreenclicked',flowplayerhtml.fp,true);
 			
 		});
 		
-		fp.on('playerfullscreenexit',function(flowplayer){
+		fp.on('playerfullscreenexit',function(flowplayerhtml){
 			
-			me.fireEvent('playerfullscreenexit',flowplayer.fp);
+			me.fireEvent('playerfullscreenexit',flowplayerhtml.fp);
 			
 		});
 		
@@ -218,9 +218,9 @@ Ext.define('SWP.view.player.SWPPlayer', {
         }
     	
     
-    	var fp = this.down('flowplayer');
+    	var fp = this.down('flowplayerhtml');
     	
-    	fp = this.down('flowplayer').getPlayer();
+    	fp = this.down('flowplayerhtml').getPlayer();
     	var start = chapterRec.get(this.timeField);
 		var state = fp.getState();
 		
@@ -235,16 +235,16 @@ Ext.define('SWP.view.player.SWPPlayer', {
 				var fbplayer = this;
 				if(state == -1){ //this condition is true when the player is first time load / initializing 
 					fp.load(function(){
-						fbplayer.down('flowplayer').registeredCuepoints = false;
+						fbplayer.down('flowplayerhtml').registeredCuepoints = false;
 						fbplayer.justplay = true;
 						fp.setClip({url:chapterRec.get('url')});
-						fbplayer.down('flowplayer').chapterRec = chapterRec;
-						fbplayer.down('flowplayer').registeredCuepoints=false;
+						fbplayer.down('flowplayerhtml').chapterRec = chapterRec;
+						fbplayer.down('flowplayerhtml').registeredCuepoints=false;
 							fp.play().onBegin(function() {
 								SWP.isReplayAndNextStepButtonsVisible = true;
 								
 								var swpplayerCmp = Ext.ComponentQuery.query('swpplayer')[0];
-								var flowplayerCmp = swpplayerCmp.down('flowplayer');
+								var flowplayerCmp = swpplayerCmp.down('flowplayerhtml');
 								swpplayerCmp.fireEvent('loadCaptions',swpplayerCmp,fp,flowplayerCmp.chapterRec);
 								if( !flowplayerCmp.registeredCuepoints ){
 									
@@ -270,16 +270,16 @@ Ext.define('SWP.view.player.SWPPlayer', {
 				// set justplay vlaue of the swpplayer object to true.
 				// so that in the flowplayer seek handler will call load captions to load the srt files.
 				//
-				this.down('flowplayer').registeredCuepoints = false;
+				this.down('flowplayerhtml').registeredCuepoints = false;
 				this.justplay = true;
 				fp.setClip({url:chapterRec.get('url')});
-				this.down('flowplayer').chapterRec = chapterRec;
-                this.down('flowplayer').registeredCuepoints=false;
+				this.down('flowplayerhtml').chapterRec = chapterRec;
+                this.down('flowplayerhtml').registeredCuepoints=false;
 					fp.play().onBegin(function() {
 						SWP.isReplayAndNextStepButtonsVisible = true;
 						
 						var swpplayerCmp = Ext.ComponentQuery.query('swpplayer')[0];
-						var flowplayerCmp = swpplayerCmp.down('flowplayer');
+						var flowplayerCmp = swpplayerCmp.down('flowplayerhtml');
 						swpplayerCmp.fireEvent('loadCaptions',swpplayerCmp,fp,flowplayerCmp.chapterRec);
 						if( !flowplayerCmp.registeredCuepoints ){
 							
@@ -321,12 +321,12 @@ Ext.define('SWP.view.player.SWPPlayer', {
         if( this.down('flowplayerhtml'))
         	fp = this.down('flowplayerhtml').getPlayer();
         if( fp )
-        return ( fp.playing);
+        return ( fp.getState() === 3 );
         else
         	return false;
     },
     bwcheckPlugin : function(){
-        var fp = this.down('flowplayer').getPlayer();
+        var fp = this.down('flowplayerhtml').getPlayer();
         if ( Ext.isEmpty(fp) ) {
         	return false;
         } else {
@@ -334,7 +334,7 @@ Ext.define('SWP.view.player.SWPPlayer', {
         }
     },
     seekTo : function( ts ) {
-    	var fp = this.getFlowPlayer();
+    	var fp = this.down('flowplayerhtml').getPlayer();
     	
     	if ( Ext.isEmpty( fp ) ) {
     		return;
@@ -351,7 +351,7 @@ Ext.define('SWP.view.player.SWPPlayer', {
     	// 	by 2sec, if time is more than actual duration.
     	//
     	
-    	var fullduration = fp.video.duration;
+    	var fullduration = fp.getClip().fullDuration;
     	if ( ts < 0 ) {
     		fp.stop();
 			ts = 0;
@@ -365,15 +365,17 @@ Ext.define('SWP.view.player.SWPPlayer', {
     	// this.forwardSeek = ts;
     },
     getTime: function() {
-    	var fp = this.getFlowPlayer();
+    	var fp = this.down('flowplayerhtml').getPlayer();
     	
+    	//
     	// Here it will return the player time based on the Temporary value,
     	// If the value is same as actual time then return actual time otherwise return Temporary player time .
-    	if(SWP.frwrewTempTime == undefined){
-    		return fp.video.time;    		
-    	} else{
-    		return SWP.frwrewTempTime;    		
-    	}
+    	//
+    	
+    	if(SWP.frwrewTempTime == undefined)
+    		return fp.getTime();
+    	else
+    		return SWP.frwrewTempTime;
     },
     getFlowPlayer: function() {
     	var fp = undefined;
@@ -384,7 +386,7 @@ Ext.define('SWP.view.player.SWPPlayer', {
     	return fp;
     },
     removePlayer : function(){ 
-    	var fp =  this.down('flowplayer'), 
+    	var fp =  this.down('flowplayerhtml'), 
     		player = fp.getPlayer(); //201404230540
     	if( fp != undefined ){
     		try{
@@ -402,14 +404,14 @@ Ext.define('SWP.view.player.SWPPlayer', {
     	}
     },
     stopPlayer : function(){
-    	var fp = this.getFlowPlayer();
+    	var fp = this.down('flowplayerhtml').getPlayer();
     	
     	if ( fp !== null && fp !== undefined) {
     		return fp.stop();
     	} 
     },
     pause: function() {
-    	var fp = this.getFlowPlayer();
+    	var fp = this.down('flowplayerhtml').getPlayer();
     	
     	if ( fp !== null ) {
     		return fp.pause();
@@ -418,37 +420,33 @@ Ext.define('SWP.view.player.SWPPlayer', {
     	}
     },
     resumeVideo : function(){
-        var fp = this.getFlowPlayer();
+        var fp = this.down('flowplayerhtml').getPlayer();
         return fp.resume();
     },
     bufferStart : function(){
-        var fp = this.getFlowPlayer();
+        var fp = this.down('flowplayerhtml').getPlayer();
         return fp.startBuffering();
     },
     currentClip : function(){
-        var fp = this.getFlowPlayer();
+        var fp = this.down('flowplayerhtml').getPlayer();
         return fp.getClip();
     },
     getVideoState : function(){
-        var fp = this.getFlowPlayer();
-        if(fp){        	
-        	if(fp.video.playing){
-        		return 3;
-        	}else if(fp.video.paused){
-        		return 4;
-        	}
-        }
+        var fp = this.down('flowplayerhtml').getPlayer();
+        return fp.getState();
     },
     resetSkippable : function(chapterRec){
-        if( !this.getFlowPlayer().ready ){
+        if( !this.getFlowPlayer().isLoaded() ){
             return ;
         }
-    	if(chapterRec.get('skippable')==1){
-    		this.flowplayerhtml.skipbutton.setVisible( true ) ;
-    		//this.getFlowPlayer().getPlugin('dock1').show();
-    	} else{
-    		this.flowplayerhtml.skipbutton.setVisible( false ) ;
-    		//this.getFlowPlayer().getPlugin('dock1').hide();
+    	if(chapterRec.get('skippable')==1)
+    	{
+    	
+    	this.getFlowPlayer().getPlugin('dock1').show();
+    	
+    	}
+    	else{
+    	this.getFlowPlayer().getPlugin('dock1').hide();
     	}
     	
     },
@@ -458,6 +456,7 @@ Ext.define('SWP.view.player.SWPPlayer', {
 			SWP.isReplayAndNextStepButtonsVisible = false;
 			this.clickeventFired = true;
 			this.getFlowPlayer().pause();
+			var pos = this.getPosition(false);			
 			var playerWidth = this.getWidth()/2; 
 			//2013115550
 			if( this.currentPosition == -1 ){
@@ -479,28 +478,30 @@ Ext.define('SWP.view.player.SWPPlayer', {
     	
     },
     hideReplayNextPlayButton:function(){
-    	if(this.getFlowPlayer()){    		
-    		if( !this.getFlowPlayer().ready || !this.showingReplayNextButtons ){
-    			return ;
-    		}
-    	}
+        if( !this.getFlowPlayer().isLoaded() || !this.showingReplayNextButtons ){
+            return ;
+        }
         
-        var state = this.getVideoState(),flowplayer = this.getFlowPlayer();
-        if(  state == 4 ){
+        var state = this.getVideoState(),
+        	flowplayer = this.getFlowPlayer();
+        if(  state== 4 ){
             this.getFlowPlayer().getPlay().show();    
         } else if(state == 3){
-        	var fullDuration = Math.round(flowplayer.video.duration),
-        		currentTime  = this.getTime();
+      
+        	var fullDuration = Math.round(flowplayer.getClip().fullDuration),
+        		currentTime = flowplayer.getTime();
         	//As at the end of the chapter if the sigle chapter and a marker is in the lesson, marker is not at the 
         	//end chapter so it is not showing replay at the end.because we are hiding the play for each seek.
         	if( fullDuration != fullDuration ){ 
-        		//this.getFlowPlayer().getPlay().hide();
+        		this.getFlowPlayer().getPlay().hide();
         	}
         }
         
-         this.flowplayerhtml.replaybutton.setVisible( false );
-         this.flowplayerhtml.nextstepsbutton.setVisible(false);
-         this.showingReplayNextButtons=true;
+             this.getFlowPlayer().getPlugin("dock2").hide();
+             //201406110909
+             this.getFlowPlayer().getPlugin("dock3").hide();
+             this.showingReplayNextButtons=true;
+            // this.getFlowPlayer().getPlugin('controls').setEnabled({all:true});
     },
       	/**
     	 * this method is used for hide "Skip Chapter" button,if Quiz window is shown.
@@ -534,85 +535,5 @@ Ext.define('SWP.view.player.SWPPlayer', {
     		return true;
     	}
     	
-    },
-    initializePlayer: function(selected, ts , videoURL){
-    	debugger;
-    	var vch = false;
-    	if ( !SWP.video && Ext.isEmpty( selected ) ) {
-    		return;
-    	}
-    	if (!SWP.video || SWP.video != selected.get('video_id') ) {
-            SWP.video = selected.get('video_id');
-            vch = true;
-        }
-    	var start = selected.get(this.timeField);
-		if ( !Ext.isEmpty( ts ) ) {
-			start = ts;
-		}
-		
-		var makerPoints = this.getVideoCuePoints(selected);
-		debugger;
-		// videoURL = "http://web28.streamhoster.com/jnovak/161/E6.2_1280x720_48kbps_500kbps.mp4";
-		// videoURL = "http://cms.skillner.com/images/sh/161/E6.2_1280x720_48kbps_500kbps.mp4";
-		// videoURL = "http://player.skillner.com/images/sh/161/E6.2_1280x720_48kbps_500kbps.mp4";
-		// videoURL = "http://stream.flowplayer.org/bauhaus/624x260.mp4";
-		
-		var api = flowplayer();
-		if(Ext.isEmpty(api)){
-			$("#player").flowplayer({
-		     	playlist: [[{ mp4: videoURL }]],
-		     	tooltip:false,
-		     	preload:true,
-		     	//rtmp:'rtmp://s3b78u0kbtx79q.cloudfront.net/cfx/st',
-		     	cuepoints: makerPoints
-		     	//makerPoints [10.4, 23.5, { time: 78, below: true }]
-	     	});
-		}
-		
-		//var playList = api.conf.playlist[0];
-    	//var firstPlayList = playList[0];
-    	//var playURL = firstPlayList['mp4'];
-		api = flowplayer();
-		
-		if(vch){
-			//If the video is changed then we have to register new 
-			//cuepoints with the latest video.
-			api.cuepoints = makerPoints;
-		}
-		api.load(videoURL,function(){
-			api.seek(start);
-		});
-    },
-    getVideoCuePoints: function(ch) {
-
-	    var chapterStore = Ext.StoreManager.lookup('chapters');
-	    var hiddenChapters;
-	    var makerPoints = [];
-	    
-	    var matchedRecords = chapterStore.queryBy(function(r, i) {
-	      return (ch.get('video_id').substr(1) == r.get('video_id').substr(1));
-	    }, ch);
-
-	    var chapter = matchedRecords.items;
-
-	    for (var k = 0; k < chapter.length; k++) {
-	      if ((SWPtmp.chapter_play_back == 'True' || SWPtmp.chapter_play_back == 1)) {
-	        if (!Ext.isEmpty(chapter[k].get('hiddenChapters'))) {
-	
-	          hiddenChapters = chapter[k].get('hiddenChapters');
-	          for (var i = 0; i < hiddenChapters.length; i++) {
-	            var indexValue = Ext.Array.indexOf(makerPoints, parseInt(hiddenChapters[i].start)+0.1);
-	
-	            //the playbackpoints which will verified in cuepoint 
-	            //handler Checking the hidden chapters for duplicate 
-	            //and registering only one hidden chapter from duplicates
-	              if (indexValue == -1) {
-	            		makerPoints.push(parseInt(hiddenChapters[i].start)+0.1);
-		          }
-		      }
-		    }
-	    }
-	  }
-	    return makerPoints;
     }
 });
