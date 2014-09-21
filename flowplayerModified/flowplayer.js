@@ -1747,7 +1747,7 @@ flowplayer(function(api, root) {
       root.css("backgroundColor", "#555");
    }
 
-   $(".fp-toggle, .fp-play", root).click(api.toggle);
+   /*$(".fp-toggle, .fp-play", root).click(api.toggle);*/
 
    /* controlbar elements */
    $.each(['mute', 'fullscreen', 'unload'], function(i, key) {

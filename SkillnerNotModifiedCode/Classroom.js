@@ -722,7 +722,7 @@ Ext.define('SWP.controller.Classroom', {
     var me = this;
     
     var videoPlayer = this.getPlayer().getFlowPlayer();
-    var isPlaying = videoPlayer.isPlaying();
+    var isPlaying = videoPlayer.playing;
     if( isPlaying ) {
       this.pauseVideoPlayer();
     }
@@ -3506,7 +3506,7 @@ Ext.define('SWP.controller.Classroom', {
   },
 
   chapterSelected: function(chPnl, chGrid, v, selected, ts, questionInd, language) {
-
+debugger;
     var vch = false;
 
     var grid = Ext.ComponentQuery.query('chapterslist gridpanel')[0];
@@ -4528,11 +4528,11 @@ Ext.define('SWP.controller.Classroom', {
 
 
 
-    if (player.getFlowPlayer().isPlaying() || player.getFlowPlayer().getState() < 3) {
+    if (player.getFlowPlayer().playing) { /*|| player.getFlowPlayer().getState() < 3*/
 
 
 
-      if (player.getFlowPlayer().getState() < 3) {
+      if (player.getFlowPlayer().playing) {/*player.getFlowPlayer().getState() < 3*/
 
 
 
@@ -4569,8 +4569,6 @@ Ext.define('SWP.controller.Classroom', {
       }
 
     } else {
-
-
 
       this.isPlayerPaused = false;
 
@@ -8098,7 +8096,7 @@ Ext.define('SWP.controller.Classroom', {
   },
 
   replayButton: function(playerTime) { 
-
+	debugger;
     var ch = this.findPlaying();
     var swpPlayer = this.getPlayer();
     var fp = swpPlayer.getFlowPlayer();
@@ -8106,7 +8104,7 @@ Ext.define('SWP.controller.Classroom', {
     var nextMin = 0;
     var main = playerTime * 1000;
     var seekTime;
-    var cuepoints = swpPlayer.playbackPoints; //20131610 use playbackPoints
+    var cuepoints = fp.cuepoints; //20131610 use playbackPoints
 
       for (var l = 0; l < cuepoints.length; l++) {
         if (cuepoints[l] < main) {
@@ -8115,7 +8113,7 @@ Ext.define('SWP.controller.Classroom', {
           }
         }
       }
-      seekTime = nextMin / 1000;
+      seekTime = Math.round(nextMin) / 1000;
       try{    	  
     	  fp.getPlugin("dock1").hide();
     	  fp.getPlugin("dock2").hide();
@@ -8130,7 +8128,7 @@ Ext.define('SWP.controller.Classroom', {
       console.log(seekTime);
       fp.seek(seekTime);
       this.getPlayer().replayed=true;
-      //fp.resume();
+      fp.play();
   },
   registerCuePointsFromSeek: function(me, clip, selected) {
     if (selected.get('hiddenChapters').length > 0 && !selected.get('cuepointnotregistered')) {
@@ -8367,10 +8365,10 @@ Ext.define('SWP.controller.Classroom', {
    */
   playButton: function(swpplayr, flowplayer) {
     var currentPaly = this.findPlaying();
-
-    var currentTime = Math.round(flowplayer.getTime());
+    debugger;
+    var currentTime = Math.round(flowplayer.video.time);
     
-    var fullDuration = Math.round(flowplayer.getClip().fullDuration);
+    var fullDuration = Math.round(flowplayer.video.duration);
     //201310280502
     if (currentPaly.get("lastChapter") && (currentTime == fullDuration)) {
 
@@ -8378,10 +8376,10 @@ Ext.define('SWP.controller.Classroom', {
 
     } else {
 
-      swpplayr.chapterResumed = flowplayer.getTime();
+      swpplayr.chapterResumed = flowplayer.video.time;
       
 
-      flowplayer.getPlugin("dock1").hide();
+      /*flowplayer.getPlugin("dock1").hide();*/
       swpplayr.hideReplayNextPlayButton();
 
       flowplayer.resume();

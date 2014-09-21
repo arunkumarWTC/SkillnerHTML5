@@ -73,6 +73,7 @@ Ext.define('SWP.view.player.SWPPlayer', {
     	
     },
     createFplayer : function() {
+    	debugger;
     	var me = this;
     	var fp = Ext.create('SWP.view.player.FlowplayerHTML', {
 	    	smilUrl : this.smilUrl,
@@ -443,14 +444,15 @@ Ext.define('SWP.view.player.SWPPlayer', {
         if( !this.getFlowPlayer().ready ){
             return ;
         }
-    	if(chapterRec.get('skippable')==1){
-    		this.flowplayerhtml.skipbutton.setVisible( true ) ;
+    	if(chapterRec.get('skippable')==0){
+    		Ext.select('span[class=fp-toppause]').elements[0].style.display = 'block';
+    		/*this.flowplayerhtml.skipbutton.setVisible( true ) ;*/
     		//this.getFlowPlayer().getPlugin('dock1').show();
-    	} else{
-    		this.flowplayerhtml.skipbutton.setVisible( false ) ;
+    	} else {
+    		Ext.select('span[class=fp-toppause]').elements[0].style.display = 'none';
+    		/*this.flowplayerhtml.skipbutton.setVisible( false ) ;*/
     		//this.getFlowPlayer().getPlugin('dock1').hide();
     	}
-    	
     },
 	playBackHiddenChapter : function(chapterRec,cuepoint,buttonposition){
 		if( SWPtmp.chapter_play_back == 'True' ){
@@ -479,6 +481,9 @@ Ext.define('SWP.view.player.SWPPlayer', {
     	
     },
     hideReplayNextPlayButton:function(){
+    	Ext.select('div[class=fp-uinext-bottom]').replaceCls('fp-uinext-bottom','fp-uinext-bottom-hide');
+		Ext.select('div[class=fp-uipre-bottom]').replaceCls('fp-uipre-bottom','fp-uipre-bottom-hide');
+		
     	if(this.getFlowPlayer()){    		
     		if( !this.getFlowPlayer().ready || !this.showingReplayNextButtons ){
     			return ;
@@ -498,9 +503,9 @@ Ext.define('SWP.view.player.SWPPlayer', {
         	}
         }
         
-         this.flowplayerhtml.replaybutton.setVisible( false );
+         /*this.flowplayerhtml.replaybutton.setVisible( false );
          this.flowplayerhtml.nextstepsbutton.setVisible(false);
-         this.showingReplayNextButtons=true;
+         this.showingReplayNextButtons=true;*/
     },
       	/**
     	 * this method is used for hide "Skip Chapter" button,if Quiz window is shown.
